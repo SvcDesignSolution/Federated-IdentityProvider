@@ -10,8 +10,9 @@
         group: master
         namespace: itsm
         domain: onwalk.net
-        auto_issuance: true
+        update_secret: true
+        auto_issuance: false
         tls:
           - secret_name: openldap-tls
             keyfile: /etc/ssl/onwalk.net.key
-            certfile: /etc.ssl/onwalk.net.pem
+            certfile: /etc/ssl/onwalk.net.pem

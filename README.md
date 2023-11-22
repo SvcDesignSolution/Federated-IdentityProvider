@@ -29,6 +29,7 @@ Pipeline env:
 
 Actions secrets:
 
+- ADMIN_INIT_PASSWORD
 - HELM_REPO_PASSWORD
 - HELM_REPO_REGISTRY
 - HELM_REPO_USER

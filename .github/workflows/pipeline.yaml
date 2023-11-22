@@ -18,6 +18,9 @@ env:
   REPO: "artifact.onwalk.net"
   IMAGE: base/${{ github.repository }} 
   TAG: ${{ github.sha }}
+  DNS_AK: ${{ secrets.DNS_AK }}
+  DNS_SK: ${{ secrets.DNS_SK }}
+  PASSWORD: ${{ secrets.ADMIN_INIT_PASSWORD }}
 
 jobs:
   build:
@@ -41,7 +44,8 @@ jobs:
   setup-k3s:
     runs-on: ubuntu-latest
     needs:
-      - docker-image
+      - build
+      - test
 
     steps:
       - uses: actions/checkout@v3
@@ -74,6 +78,8 @@ jobs:
           ansible_ssh_private_key_file=~/.ssh/id_rsa
           ansible_host_key_checking=False
           ingress_ip=${{ secrets.HOST_IP }}
+          dns_ak=$DNS_AK
+          dns_sk=$DNS_SK
           EOF
           cat hosts/inventory
           ansible-playbook -i hosts/inventory init_k3s_cluster_std -D
@@ -88,10 +94,8 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y git && git submodule update --init --recursive
 
-      - name: Deploy Keycloak
-        shell: bash
+      - name: Pre setup for Ansible playbook
         run: |
-          export ANSIBLE_HOST_KEY_CHECKING=False
           sudo apt install jq ansible -y
 
           mkdir -pv ~/.ssh/
@@ -101,8 +105,13 @@ jobs:
           sudo chmod 0400 ~/.ssh/id_rsa
           md5sum ~/.ssh/id_rsa
 
+      - name: Deploy Keycloak
+        shell: bash
+        run: |
+          export ANSIBLE_HOST_KEY_CHECKING=False
+
           mkdir -pv hosts/
-          cat > hosts/inventory << EOF
+          cat > hosts/keycloak << EOF
           [master]
           ${{ secrets.HOST_DOMAIN }}               ansible_host=${{ secrets.HOST_IP }}
 
@@ -111,25 +120,19 @@ jobs:
           ansible_ssh_user=${{ secrets.HOST_USER }}
           ansible_ssh_private_key_file=~/.ssh/id_rsa
           ansible_host_key_checking=False
-          keycloak_ui_password=$OIDC_ADMIN_PASSWORD
+          admin_password=$PASSWORD
+          dns_ak=$DNS_AK
+          dns_sk=$DNS_SK
           EOF
-          ansible-playbook -i hosts/inventory init_keycloak -D
+          ansible-playbook -i hosts/keycloak init_keycloak -D
 
       - name: Deploy OpenLDAP
         shell: bash
         run: |
           export ANSIBLE_HOST_KEY_CHECKING=False
-          sudo apt install jq ansible -y
-
-          mkdir -pv ~/.ssh/
-          cat > ~/.ssh/id_rsa << EOF
-          ${{ secrets.SSH_PRIVATE_KEY }}
-          EOF
-          sudo chmod 0400 ~/.ssh/id_rsa
-          md5sum ~/.ssh/id_rsa
 
           mkdir -pv hosts/
-          cat > hosts/inventory << EOF
+          cat > hosts/openldap << EOF
           [master]
           ${{ secrets.HOST_DOMAIN }}               ansible_host=${{ secrets.HOST_IP }}
 
@@ -138,5 +141,7 @@ jobs:
           ansible_ssh_user=${{ secrets.HOST_USER }}
           ansible_ssh_private_key_file=~/.ssh/id_rsa
           ansible_host_key_checking=False
+          dns_ak=$DNS_AK
+          dns_sk=$DNS_SK
           EOF
-          ansible-playbook -i hosts/inventory init_openldap -D
+          ansible-playbook -i hosts/openldap init_openldap -D
