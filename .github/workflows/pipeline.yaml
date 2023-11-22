@@ -105,13 +105,8 @@ jobs:
           sudo chmod 0400 ~/.ssh/id_rsa
           md5sum ~/.ssh/id_rsa
 
-      - name: Deploy Keycloak
-        shell: bash
-        run: |
-          export ANSIBLE_HOST_KEY_CHECKING=False
-
           mkdir -pv hosts/
-          cat > hosts/keycloak << EOF
+          cat > hosts/k3s << EOF
           [master]
           ${{ secrets.HOST_DOMAIN }}               ansible_host=${{ secrets.HOST_IP }}
 
@@ -124,24 +119,15 @@ jobs:
           dns_ak=$DNS_AK
           dns_sk=$DNS_SK
           EOF
-          ansible-playbook -i hosts/keycloak init_keycloak -D
+
+      - name: Deploy Keycloak
+        shell: bash
+        run: |
+          export ANSIBLE_HOST_KEY_CHECKING=False
+          ansible-playbook -i hosts/k3s init_keycloak -D
 
       - name: Deploy OpenLDAP
         shell: bash
         run: |
           export ANSIBLE_HOST_KEY_CHECKING=False
-
-          mkdir -pv hosts/
-          cat > hosts/openldap << EOF
-          [master]
-          ${{ secrets.HOST_DOMAIN }}               ansible_host=${{ secrets.HOST_IP }}
-
-          [all:vars]
-          ansible_port=22
-          ansible_ssh_user=${{ secrets.HOST_USER }}
-          ansible_ssh_private_key_file=~/.ssh/id_rsa
-          ansible_host_key_checking=False
-          dns_ak=$DNS_AK
-          dns_sk=$DNS_SK
-          EOF
-          ansible-playbook -i hosts/openldap init_openldap -D
+          ansible-playbook -i hosts/k3s init_openldap -D
