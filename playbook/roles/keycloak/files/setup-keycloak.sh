@@ -7,8 +7,9 @@ export keycloak_ui_password=$4
 export keycloak_db_password=$5
 
 cat > keycloak-values.yaml << EOF
-postgresql:
-  enabled: false
+proxy: reencrypt
+auth:
+  adminPassword: "$keycloak_ui_password"
 ingress:
   enabled: true
   ingressClassName: "nginx"
@@ -18,8 +19,8 @@ ingress:
   - hosts:
       - keycloak.${domain}
     secretName: $secret
-auth:
-  adminPassword: "$keycloak_ui_password"
+postgresql:
+  enabled: false
 externalDatabase:
   host: "postgresql.database.svc.cluster.local"
   port: 5432
